@@ -7,7 +7,7 @@ The LM Desk project is a central entrypoint for configuring a set of awesome too
 ## Quick Start
 
 ```sh
-bash -c "$(curl -fsSL 'https://raw.githubusercontent.com/IBM/lm-desk/main/get-lm-desk.sh')"
+bash -c "$(curl -fsSL 'https://raw.githubusercontent.com/vedem1192/lm-desk/main/dev-get-lm-desk.sh')"
 ```
 
 ## Principles
