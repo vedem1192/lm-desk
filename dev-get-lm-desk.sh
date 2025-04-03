@@ -327,9 +327,9 @@ function report_installed {
     brown "- curl: $curl_bin"
     brown "- brew: $brew_bin"
     brown "- ollama: $ollama_bin"
+    brown "- uv: $uv_bin"
     brown "- git: $git_bin"
     brown "- code: $code_bin"
-    brown "- jq: $jq_bin"
     brown $(term_bar -)
 }
 
