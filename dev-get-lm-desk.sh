@@ -584,7 +584,5 @@ fi
 ############################
 if [ "$run_open_webui" == "0" ] && yes_no_prompt "Run Openwebui?"
 then
-    run $ollama_bin start || 
-    echo $uv_bin ||
-    run $uv_bin run https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/scripts/openwebui.py
+    run $ollama_bin start || run $uv_bin run https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/scripts/openwebui.py
 fi
