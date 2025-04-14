@@ -5,6 +5,7 @@
 fnames=()
 patterns=()
 verbose=0
+show_help=0
 
 while [ $# -gt 0 ]
 do
@@ -19,12 +20,29 @@ do
         -vv)
             verbose="2"
             ;;
+        -h|--help)
+            show_help=1
+            ;;
         *)
+            if [ $show_help -eq 0 ]; then
+                fnames+=("$1")
+            fi
             fnames+=($1)
             ;;
     esac
     shift
 done
+
+# Display help information if --help is used
+if [ $show_help -eq 1 ]; then
+    echo "Usage: $0 [options] [files]"
+    echo ""
+    echo "Options:"
+    echo "  -k, --pattern <PATTERN>   Specify test patterns"
+    echo "  -v, --verbose            Enable verbose output (can be used twice for more detail)"
+    echo "  --help                   Show this help message"
+    exit 0
+fi
 
 # If no fnames given, use all test files under the current directory
 if [ ${#fnames[@]} -eq 0 ]
@@ -54,6 +72,17 @@ function should_run {
     done
     return 1
 }
+
+# Function definition for fail
+function fail {
+  # Capture the current line number
+  local LINE_NUMBER=${BASH_SOURCE[1]}
+
+  # Print failure message with line number
+  echo "Error in $LINE_NUMBER" >&2
+  exit 1
+}
+
 
 ## Main ########################################################################
 
