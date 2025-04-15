@@ -10,6 +10,21 @@ The LM Desk project is a central entrypoint for configuring a set of awesome too
 bash -c "$(curl -fsSL 'https://raw.githubusercontent.com/IBM/lm-desk/main/get-lm-desk.sh')"
 ```
 
+Once you have installed required packages, you will be able to start ollama and open webui (obee) using the following command :
+
+```
+# start obee
+obee start
+
+# stop obee
+obee stop
+
+# get help
+obee --help
+```
+
+You can access open webui at <http://localhost:8080>
+
 ## Principles
 
 - **5-Minutes to Happiness**: You should be able to get up and running with these AI tools in 5 minutes or less (as long as you have a fast internet connection!)
