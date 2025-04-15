@@ -10,27 +10,20 @@ The LM Desk project is a central entrypoint for configuring a set of awesome too
 bash -c "$(curl -fsSL 'https://raw.githubusercontent.com/IBM/lm-desk/main/get-lm-desk.sh')"
 ```
 
-If you want to start Openwebui, wait until you see this in your terminal, then head to <http://localhost:8080>
+Once you have installed required packages, you will be able to start ollama and open webui (obee) using the following command :
 
 ```
+# start obee
+obee start
 
- ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
-╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
+# stop obee
+obee stop
 
-
-v0.6.0 - building the best open-source AI user interface.
-
-https://github.com/open-webui/open-webui
-
-Fetching 30 files: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 30/30 [00:00<00:00, 16491.37it/s]
-INFO:     Started server process [89086]
-INFO:     Waiting for application startup.
-2025-04-03 16:16:42.173 | INFO     | open_webui.utils.logger:start_logger:140 - GLOBAL_LOG_LEVEL: INFO - {}
+# get help
+obee --help
 ```
+
+You can access open webui at <http://localhost:8080>
 
 ## Principles
 
