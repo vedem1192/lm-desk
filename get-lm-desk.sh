@@ -26,6 +26,7 @@ git_bin=$(find_cmd_bin git || true)
 code_bin=$(find_cmd_bin code || true)
 uv_bin=$(find_cmd_bin uv || true)
 obee_bin=$(find_cmd_bin obee || true)
+beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
 chat_model="granite3.2:8b"
@@ -667,6 +668,23 @@ function install_obee {
 }
 
 
+#----
+# Install beeai
+#----
+function install_beeai {
+    green "$(term_bar -)"
+    bold green "INSTALLING BEEAI"
+    green "$(term_bar -)"
+
+    # TODO: Guard for missing brew
+    run $brew_bin install i-am-bee/beeai/beeai
+    beeai_bin=$(find_cmd_bin beeai)
+
+    # TODO: Make this non-interactive if requested
+    run $beeai_bin env setup
+}
+
+
 ## Main ########################################################################
 report_installed
 
@@ -732,4 +750,12 @@ fi
 if [ "$obee_bin" == "" ] &&  yes_no_prompt "Install obee?"
 then
     install_obee
+fi
+
+#################
+# Install beeai #
+#################
+if [ "$beeai_bin" == "" ] &&  yes_no_prompt "Install beeai?"
+then
+    install_beeai
 fi
