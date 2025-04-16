@@ -651,12 +651,11 @@ function install_obee {
             sed -i '' -e 's|<OPEN_WEBUI_SCRIPT>|'"$open_webui_script"'|g' $HOME/Library/LaunchAgents/com.granite.obee.plist
         fi
 
-
         # 2. Do the brew tap stuff
         if [ "$brew_bin" != "" ]
         then
             run $brew_bin update
-            run $brew_bin tap IBM/obee
+            run $brew_bin tap IBM/obee https://github.com/IBM/homebrew-obee.git
             run $brew_bin install obee
         # Otherwise, use curl to pull from GH release directly
         else
@@ -718,18 +717,18 @@ then
     pull_models
 fi
 
-############################
+########################
 # Install uv if needed #
-############################
+########################
 if [ "$uv_bin" == "" ] && yes_no_prompt "Install uv?"
 then
     install_uv
     report_installed
 fi
 
-############################
-# Install obee             #
-############################
+################
+# Install obee #
+################
 if [ "$obee_bin" == "" ] &&  yes_no_prompt "Install obee?"
 then
     install_obee
