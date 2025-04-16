@@ -416,11 +416,11 @@ function install_ollama_curl {
 }
 
 #----
-# Install uv with curl 
+# Install uv with curl
 #----
 function install_uv_curl {
     echo "Installing uv with curl"
-    
+
     if [ "$OS" == "Darwin" ]
     then
         echo "Installing on darwin -- not ready yet"
@@ -493,7 +493,7 @@ function pull_models {
 
 
 #----
-# Install uv 
+# Install uv
 #----
 function install_uv {
     green "$(term_bar -)"
@@ -636,29 +636,34 @@ function install_obee {
     bold green "INSTALLING OBEE"
     green "$(term_bar -)"
 
-    # ONLY FOR MACOS
-    # 1. Do the plist stuff 
-    curl -o ~/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
-    curl -o ~/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
-
-    open_webui_script=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/openwebui.py
-
-    if [ "$ollama_bin" != "" ] && [ "$uv_bin" != "" ]; then
-        sed -i '' -e 's|<OLLAMA_BIN>|'"$ollama_bin"'|g' ~/Library/LaunchAgents/com.granite.ollama.plist
-        sed -i '' -e 's|<UV_BIN>|'"$uv_bin"'|g' ~/Library/LaunchAgents/com.granite.obee.plist
-        sed -i '' -e 's|<OPEN_WEBUI_SCRIPT>|'"$open_webui_script"'|g' ~/Library/LaunchAgents/com.granite.obee.plist
-    fi
-
-
-    # 2. Do the brew tap stuff
-    if [ "$brew_bin" != "" ]
+    # Only for MACOS at the moment
+    if [ "$OS" == "Darwin" ]
     then
-        run $brew_bin update
-        run $brew_bin tap IBM/obee
-        run $brew_bin install obee
-    # Otherwise, use curl to pull from GH release directly
+        # 1. Do the plist stuff
+        curl -o $HOME/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
+        curl -o $HOME/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
+
+        open_webui_script=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/openwebui.py
+
+        if [ "$ollama_bin" != "" ] && [ "$uv_bin" != "" ]; then
+            sed -i '' -e 's|<OLLAMA_BIN>|'"$ollama_bin"'|g' $HOME/Library/LaunchAgents/com.granite.ollama.plist
+            sed -i '' -e 's|<UV_BIN>|'"$uv_bin"'|g' $HOME/Library/LaunchAgents/com.granite.obee.plist
+            sed -i '' -e 's|<OPEN_WEBUI_SCRIPT>|'"$open_webui_script"'|g' $HOME/Library/LaunchAgents/com.granite.obee.plist
+        fi
+
+
+        # 2. Do the brew tap stuff
+        if [ "$brew_bin" != "" ]
+        then
+            run $brew_bin update
+            run $brew_bin tap IBM/obee
+            run $brew_bin install obee
+        # Otherwise, use curl to pull from GH release directly
+        else
+            echo "You are missing out"
+        fi
     else
-        echo "You are missing out"
+        fail "Cannot install obee on unsupported platform $OS"
     fi
 }
 
