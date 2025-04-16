@@ -78,7 +78,7 @@ function api_call {
     shift
     method=$1
     shift
-    curl -s ${api_base_url}/$endpoint -X $method -H "Authorization: Bearer $token" "$@"
+    curl -s ${api_base_url}/$endpoint -X $method -H "Content-Type: application/json" -H "Authorization: Bearer $token" "$@"
 }
 
 function function_exists {
@@ -105,4 +105,4 @@ body=$(python -c "import json; print(json.dumps({
         }
     }
 }))")
-api_call $post_endpoint POST -H "Content-Type: application/json" -d"$body" -v
+api_call $post_endpoint POST -d"$body"
