@@ -1,12 +1,11 @@
 # /// script
 # requires-python = ">=3.11,<3.12"
 # dependencies = [
-#     "open-webui==0.6.0",
+#     "open-webui>=0.6.0",
+#     "beeai-sdk==0.0.22"
 # ]
 # ///
 
-import socket
-from contextlib import closing
 import os
 import base64
 import uvicorn
@@ -17,6 +16,7 @@ KEY_FILE = Path.cwd() / ".webui_secret_key"
 
 os.environ["FROM_INIT_PY"] = "true"
 os.environ['WEBUI_SECRET_KEY'] = "l*cals3cre7*"
+os.environ["WEBUI_AUTH"] = "False"
 
 
 if os.getenv("WEBUI_SECRET_KEY") is None:
