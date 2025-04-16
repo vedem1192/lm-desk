@@ -654,7 +654,7 @@ function install_obee {
     if [ "$brew_bin" != "" ]
     then
         run $brew_bin update
-        run $brew_bin tap vedem1192/obee
+        run $brew_bin tap IBM/obee
         run $brew_bin install obee
     # Otherwise, use curl to pull from GH release directly
     else
