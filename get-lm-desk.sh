@@ -638,10 +638,10 @@ function install_obee {
 
     # ONLY FOR MACOS
     # 1. Do the plist stuff 
-    curl -o ~/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/com.granite.ollama.plist
-    curl -o ~/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/com.granite.obee.plist
+    curl -o ~/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
+    curl -o ~/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
 
-    open_webui_script=https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/scripts/openwebui.py
+    open_webui_script=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/openwebui.py
 
     if [ "$ollama_bin" != "" ] && [ "$uv_bin" != "" ]; then
         sed -i '' -e 's|<OLLAMA_BIN>|'"$ollama_bin"'|g' ~/Library/LaunchAgents/com.granite.ollama.plist
