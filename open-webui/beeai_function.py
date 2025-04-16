@@ -3,7 +3,7 @@ General-purpose Open WebUI Function for a BeeAI agent
 """
 # Standard
 from functools import partial
-from typing import Awaitable, Callable
+from typing import AsyncGenerator, Awaitable, Callable
 import logging
 
 # Third Party
@@ -39,7 +39,7 @@ class Pipe:
         __user__: dict | None,
         __request__: Request,
         __event_emitter__: Callable[[dict], Awaitable[None]] | None = None,
-    ) -> str:
+    ) -> AsyncGenerator[str, None]:
         """The main pipeline invocation function called by Open WebUI"""
         try:
             async def emit_event_safe(message: str):
@@ -108,6 +108,24 @@ class Pipe:
                                 if content := assistant_msg.get("content"):
                                     last_result_streamed = True
                                     yield content
+                        elif logs := delta.get("logs"):
+                            # Ignore logs after the real results start coming
+                            if last_result_streamed:
+                                continue
+                            for log in list(filter(bool, logs)):
+                                if text := log.get("message", "").strip():
+                                    short_text = text[:50]
+                                    if short_text != text:
+                                        short_text += "..."
+                                    metadata = log.get("metadata") or []
+                                    if isinstance(metadata, str):
+                                        metadata = [metadata]
+                                    metadata = list(filter(bool, metadata))
+                                    detail_body = "\n".join([text] + metadata)
+                                    details = f"<details>\n\n<summary>{short_text}</summary>\n\n{detail_body}</details>\n"
+                                    yield details
+                        else:
+                            logging.debug("Unknown delta: %s", delta)
 
                     case acp_types.RunAgentResult() as result:
                         if not last_result_streamed:
@@ -122,25 +140,7 @@ class Pipe:
                                         yield content
 
                     case _:
-                        print("----------")
-                        print(type(msg))
-                        print(dir(msg))
-                        print(msg)
-
-            # Emit events as the agent does
-
-            # If the agent emits an event with the context for the report
-
-            ###################
-            # Open Questions:
-            # - Is there a way to indicate single/multi-turn from the agent?
-            # - Is there a way to emit an Artifact based on detecting the output of
-            #   the agent?
-            # - Can the agent's output be parsed to yield different types for Open
-            #   WebUI?
-
-            #DEBUG
-            # return "Done and done!"
+                        log.debug("Unknown message type (%s): %s", type(msg), msg)
 
         except Exception as err:
             logging.error("Got an error! %s", err, exc_info=True)
