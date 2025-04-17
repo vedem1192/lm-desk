@@ -23,13 +23,13 @@ curl_bin=$(find_cmd_bin curl || true)
 brew_bin=$(find_cmd_bin brew || true)
 ollama_bin=$(find_cmd_bin ollama || true)
 git_bin=$(find_cmd_bin git || true)
-code_bin=$(find_cmd_bin code || true)
 uv_bin=$(find_cmd_bin uv || true)
 obee_bin=$(find_cmd_bin obee || true)
 beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
 models="granite3.3 granite3.2-vision"
+agents="gpt-researcher aider"
 dry_run="0"
 
 # If running without a TTY, always assume 'yes'
@@ -49,10 +49,10 @@ Options:
     -b, --brew-bin           Specify the path to brew (default is ${brew_bin})
     -o, --ollama-bin         Specify the path to ollama (default is ${ollama_bin})
     -g, --git-bin            Specify the path to git (default is ${git_bin})
-    -v, --vs-code-bin        Specify the path to code (default is ${code_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
+    -a, --agents             Specify the agents to configure in obee as a space-separated string (default is ${agents})
     -y, --yes                Skip confirmation prompt
     -n, --dry-run            Run without installing anything"
 
@@ -76,10 +76,6 @@ while [ $# -gt 0 ]; do
             ;;
         --git-bin|-g)
             git_bin="$2"
-            shift
-            ;;
-        --vs-code-bin|-v)
-            code_bin="$2"
             shift
             ;;
         --jq-bin|-j)
@@ -108,14 +104,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-# Set up the default vs code CLI path
-if  [ "$code_bin" == "" ] && \
-    [ -f "/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code" ] && \
-    [ -x "/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code" ]
-then
-    code_bin="/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code"
-fi
 
 ## Helpers #####################################################################
 
@@ -321,7 +309,6 @@ function report_installed {
     brown "- uv: $uv_bin"
     brown "- obee: $obee_bin"
     brown "- git: $git_bin"
-    brown "- code: $code_bin"
     brown "- jq: $jq_bin"
     brown $(term_bar -)
 }
@@ -572,8 +559,8 @@ function install_obee {
     if [ "$OS" == "Darwin" ]
     then
         # 1. Do the plist stuff
-        curl -o $HOME/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
-        curl -o $HOME/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
+        $curl_bin -o $HOME/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
+        $curl_bin -o $HOME/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
 
         open_webui_script=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/openwebui.py
 
@@ -596,6 +583,61 @@ function install_obee {
     else
         fail "Cannot install obee on unsupported platform $OS"
     fi
+    obee_bin=$(find_cmd_bin obee || true)
+}
+
+
+#----
+# Configure beeai
+#----
+function configure_obee {
+    green "$(term_bar -)"
+    bold green "CONFIGURING OBEE"
+    green "$(term_bar -)"
+
+    # Make sure obee is running
+    run obee start 2>/dev/null
+
+    # Make sure beeai is running
+    run $brew_bin services start beeai &>/dev/null
+
+    # Ping both until they're up
+    if [ "$dry_run" == "0" ]
+    then
+        for i in $(seq 1 120)
+        do
+            run $curl_bin http://localhost:8080/api/version &>/dev/null && \
+            run $curl_bin http://localhost:8333/api/v1/openapi.json &>/dev/null && \
+            break || \
+            sleep 1
+        done
+    fi
+
+    # Download the scripts for configuring the functions
+    temp_dir=$(mktemp -d)
+    run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
+    run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
+
+    # Run the configured functions
+    agents_arg=""
+    if [ "$agents" != "" ]
+    then
+        agents_arg="-v '{\"ENABLED_AGENTS\": ["
+        for agent in $agents
+        do
+            agents_arg="$agents_arg\"$agent\""
+            if [[ "$agents" != *$agent ]]
+            then
+                agents_arg="$agents_arg,"
+            fi
+        done
+        agents_arg="$agents_arg]}'"
+    fi
+    run chmod +x $temp_dir/upload_openwebui_function.sh
+    run $temp_dir/upload_openwebui_function.sh \
+        -f $temp_dir/beeai_function.py \
+        -d "Call agents from BeeAI" $agents_arg
+    run rm -rf $temp_dir
 }
 
 
@@ -689,4 +731,12 @@ fi
 if [ "$beeai_bin" == "" ] &&  yes_no_prompt "Install beeai?"
 then
     install_beeai
+fi
+
+##################
+# Configure obee #
+##################
+if [ "$obee_bin" != "" ] && [ "$beeai_bin" != "" ] && yes_no_prompt "Configure obee?"
+then
+    configure_obee
 fi
