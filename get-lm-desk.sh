@@ -512,21 +512,6 @@ function install_uv {
 }
 
 #----
-# Install continue into VS Code
-#----
-function install_continue {
-    if "$code_bin" --list-extensions | grep continue\.continue &>/dev/null
-    then
-        blue "Continue already installed in Visual Studio Code"
-    else
-        green "$(term_bar -)"
-        bold green "INSTALLING CONTINUE"
-        green "$(term_bar -)"
-        run "$code_bin" --install-extension "continue.continue"
-    fi
-}
-
-#----
 # Install jq
 #----
 function install_jq {
@@ -575,56 +560,6 @@ function install_jq {
         green "Installing jq with brew"
         run "$brew_bin" install jq
         jq_bin="$(find_cmd_bin jq)"
-    fi
-}
-
-#----
-# Configure continue to use the desired models
-#----
-function configure_continue {
-    green "$(term_bar -)"
-    bold green "CONFIGURING CONTINUE"
-    green "- Chat Model: $chat_model"
-    green "- Autocomplete Model: $autocomplete_model"
-    green "$(term_bar -)"
-
-    # Check preconditions
-    if [ "$jq_bin" == "" ]
-    then
-        fail "Cannot configure continue without jq"
-    fi
-    if [ "$continue_config" == "" ] || ! [ -f "$continue_config" ]
-    then
-        fail "Cannot configure continue before installing it"
-    fi
-
-    # Add the chat model to the front of the list if needed
-    updated_config=$(cat "$continue_config")
-    if [ "$(echo "$updated_config" | "$jq_bin" ".models[] | select(.title == \"${chat_model}\")")" == "" ]
-    then
-        current_models=$(echo "$updated_config" | "$jq_bin" -r '.models')
-        updated_config=$(
-            echo "$updated_config" \
-            | "$jq_bin" ".models = []" \
-            | "$jq_bin" ".models += [{\"title\": \"$chat_model\", \"provider\": \"ollama\", \"model\": \"$chat_model\"}]" \
-            | "$jq_bin" ".models += $current_models"
-        )
-    else
-        blue "Found existing 'models' entry named '$chat_model'"
-    fi
-
-    # Set the autocomplete model
-    updated_config=$(
-        echo "$updated_config" \
-        | "$jq_bin" ".tabAutocompleteModel = {\"title\": \"$autocomplete_model\", \"provider\":\"ollama\", \"model\": \"$autocomplete_model\"}"
-    )
-
-    if [ "$dry_run" == "1" ]
-    then
-        magenta "DRY RUN: Updated config"
-        echo "$updated_config" | "$jq_bin"
-    else
-        echo "$updated_config"  | "$jq_bin" > $continue_config
     fi
 }
 
