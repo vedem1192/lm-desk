@@ -29,8 +29,7 @@ obee_bin=$(find_cmd_bin obee || true)
 beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
-chat_model="granite3.2:8b"
-autocomplete_model="granite3.2:2b"
+models="granite3.3 granite3.2-vision"
 dry_run="0"
 
 # If running without a TTY, always assume 'yes'
@@ -53,8 +52,7 @@ Options:
     -v, --vs-code-bin        Specify the path to code (default is ${code_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
-    -p, --chat-model         Specify the path to chat model (default is ${chat_model})
-    -a, --autocomplete-model Specify the path to autocomplete model (default is ${autocomplete_model})
+    -m, --models             Specify the models to pull as a space-separated string (default is ${models})
     -y, --yes                Skip confirmation prompt
     -n, --dry-run            Run without installing anything"
 
@@ -92,12 +90,8 @@ while [ $# -gt 0 ]; do
             install_path="$2"
             shift
             ;;
-        --chat-model|-p)
-            chat_model="$2"
-            shift
-            ;;
-        --autocomplete-model|-a)
-            autocomplete_model="$2"
+        --models|-m)
+            models="$2"
             shift
             ;;
         --yes|-y)
@@ -481,8 +475,10 @@ function pull_models {
         fi
     fi
 
-    run $ollama_bin pull $chat_model
-    run $ollama_bin pull $autocomplete_model
+    for model in $models
+    do
+        run $ollama_bin pull $model
+    done
 
     # Shut down ollama if neded
     if [ "$ollama_pid" != "" ]
