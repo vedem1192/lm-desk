@@ -23,7 +23,6 @@ curl_bin=$(find_cmd_bin curl || true)
 brew_bin=$(find_cmd_bin brew || true)
 ollama_bin=$(find_cmd_bin ollama || true)
 git_bin=$(find_cmd_bin git || true)
-code_bin=$(find_cmd_bin code || true)
 uv_bin=$(find_cmd_bin uv || true)
 obee_bin=$(find_cmd_bin obee || true)
 beeai_bin=$(find_cmd_bin beeai || true)
@@ -49,7 +48,6 @@ Options:
     -b, --brew-bin           Specify the path to brew (default is ${brew_bin})
     -o, --ollama-bin         Specify the path to ollama (default is ${ollama_bin})
     -g, --git-bin            Specify the path to git (default is ${git_bin})
-    -v, --vs-code-bin        Specify the path to code (default is ${code_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
@@ -78,10 +76,6 @@ while [ $# -gt 0 ]; do
             git_bin="$2"
             shift
             ;;
-        --vs-code-bin|-v)
-            code_bin="$2"
-            shift
-            ;;
         --jq-bin|-j)
             jq_bin="$2"
             shift
@@ -108,14 +102,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-# Set up the default vs code CLI path
-if  [ "$code_bin" == "" ] && \
-    [ -f "/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code" ] && \
-    [ -x "/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code" ]
-then
-    code_bin="/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code"
-fi
 
 ## Helpers #####################################################################
 
@@ -321,7 +307,6 @@ function report_installed {
     brown "- uv: $uv_bin"
     brown "- obee: $obee_bin"
     brown "- git: $git_bin"
-    brown "- code: $code_bin"
     brown "- jq: $jq_bin"
     brown $(term_bar -)
 }
