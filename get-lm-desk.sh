@@ -615,10 +615,8 @@ function configure_obee {
 
     # Download the scripts for configuring the functions
     temp_dir=$(mktemp -d)
-    # run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
-    # run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
-    run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/gabe-l-hart/lm-desk/refs/heads/OpenBeeIndexAgents/open-webui/beeai_function.py
-    run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/gabe-l-hart/lm-desk/refs/heads/OpenBeeIndexAgents/scripts/upload_openwebui_function.sh
+    run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
+    run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
 
     # Run the configured functions
     agents_arg=""
