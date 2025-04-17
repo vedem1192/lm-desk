@@ -1,9 +1,9 @@
 """
-General-purpose Open WebUI Function for a BeeAI agent
+General-purpose Open WebUI Function for BeeAI agents
 """
 # Standard
 from functools import partial
-from typing import AsyncGenerator, Awaitable, Callable
+from typing import AsyncGenerator, Awaitable, Callable, List
 import logging
 
 # Third Party
@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 class Pipe:
     class Valves(BaseModel):
         BEEAI_URL: str = Field(default="http://localhost:8333")
+        ENABLED_AGENTS: List[str] = Field(default=[])
 
     def __init__(self):
         self.type = "pipe"
@@ -31,6 +32,10 @@ class Pipe:
         return [
             {"id": agent_name, "name": f"beeai-{agent_name}"}
             for agent_name in await self._get_agents()
+            if (
+                not self.valves.ENABLED_AGENTS
+                or agent_name in self.valves.ENABLED_AGENTS
+            )
         ]
 
     async def pipe(

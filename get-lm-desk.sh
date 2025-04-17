@@ -29,6 +29,7 @@ beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
 models="granite3.3 granite3.2-vision"
+agents="gpt-researcher aider"
 dry_run="0"
 
 # If running without a TTY, always assume 'yes'
@@ -51,6 +52,7 @@ Options:
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
+    -a, --agents             Specify the agents to configure in obee as a space-separated string (default is ${agents})
     -y, --yes                Skip confirmation prompt
     -n, --dry-run            Run without installing anything"
 
@@ -619,8 +621,24 @@ function configure_obee {
     run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/gabe-l-hart/lm-desk/refs/heads/OpenBeeIndexAgents/scripts/upload_openwebui_function.sh
 
     # Run the configured functions
+    agents_arg=""
+    if [ "$agents" != "" ]
+    then
+        agents_arg="-v '{\"ENABLED_AGENTS\": ["
+        for agent in $agents
+        do
+            agents_arg="$agents_arg\"$agent\""
+            if [[ "$agents" != *$agent ]]
+            then
+                agents_arg="$agents_arg,"
+            fi
+        done
+        agents_arg="$agents_arg]}'"
+    fi
     run chmod +x $temp_dir/upload_openwebui_function.sh
-    run $temp_dir/upload_openwebui_function.sh -f $temp_dir/beeai_function.py
+    run $temp_dir/upload_openwebui_function.sh \
+        -f $temp_dir/beeai_function.py \
+        -d "Call agents from BeeAI" $agents_arg
     run rm -rf $temp_dir
 }
 

@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
 
 ################################################################################
-# This is a helper script to test a function through Open WebUI. It does the
-# following:
-#
-# 1. Upload the function to Open WebUI
-# 2. Validate that the function is visible
-# 3. Call the function with a sample request
-# 4. Delete the function
+# This is a helper script to upload a function through Open WebUI.
 ################################################################################
 
 # Function to parse CLI arguments
@@ -15,8 +9,9 @@ parse_args() {
     # Initialize default values
     open_webui_url="http://localhost:8080"
     function_file=""
-    request="why is the sky blue?"
     function_name=""
+    description=""
+    valves=""
 
     # Process each argument
     while [[ $# > 0 ]]; do
@@ -29,17 +24,21 @@ parse_args() {
                 function_file="$2"
                 shift
                 ;;
-            -r|--request)
-                request="$2"
-                shift
-                ;;
             -n|--function-name)
                 function_name="$2"
                 shift
                 ;;
+            -d|--description)
+                description="$2"
+                shift
+                ;;
+            -v|--valves)
+                valves="$2"
+                shift
+                ;;
             *) # Unknown option, handle error
                 echo "Error: Unknown option '$1'"
-                echo "Usage: $0 [--open-webui-url URL] --function-file FILE_PATH [-r REQUEST]"
+                echo "Usage: $0 [--open-webui-url URL] --function-file FILE_PATH [-d DESCRIPTION]"
                 exit 1
                 ;;
         esac
@@ -62,9 +61,9 @@ parse_args "$@"
 echo "Open Webui URL: $open_webui_url"
 echo "Open Webui API URL: $api_base_url"
 echo "Function File Path: $function_file"
-echo "Request: $request"
 echo "Function Name: $function_name"
 echo "Function ID: $function_id"
+echo "Description: $description"
 
 # Sign in and get a token
 # NOTE: This assumes running without auth!
@@ -78,11 +77,18 @@ function api_call {
     shift
     method=$1
     shift
-    curl -s ${api_base_url}/$endpoint -X $method -H "Content-Type: application/json" -H "Authorization: Bearer $token" "$@"
+    curl -s ${api_base_url}/$endpoint \
+        -X $method \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $token" "$@"
 }
 
 function function_exists {
     api_call functions/id/$1 GET -v 2>&1 | grep "HTTP/[^ ]* 200 OK" &>/dev/null
+}
+
+function function_active {
+    api_call functions/id/$1 GET | jq -r ".is_active"
 }
 
 # Check to see if the function already exists
@@ -100,9 +106,23 @@ body=$(python -c "import json; print(json.dumps({
     \"name\": \"$function_name\",
     \"content\": open(\"$function_file\", \"r\").read(),
     \"meta\": {
+        \"description\": \"$description\",
         \"manifest\": {
             \"requirements\": \"beeai-sdk\"
         }
     }
 }))")
+
 api_call $post_endpoint POST -d"$body"
+
+# Make sure the function is toggled on
+if [ "$(function_active $function_id)" == "false" ]
+then
+    api_call functions/id/$function_id/toggle POST
+fi
+
+# If Valves given, configure them
+if [ "$valves" != "" ]
+then
+    api_call functions/id/$function_id/valves/update POST -d"$valves"
+fi
