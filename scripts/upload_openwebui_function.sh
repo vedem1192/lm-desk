@@ -56,14 +56,33 @@ parse_args() {
     api_base_url=$(echo "$open_webui_url" | sed 's,/$,,g')/api/v1
 }
 
+function echo_color {
+    color=''
+    bold=''
+    reset=''
+    color_code=$1
+    shift
+    if [[ -t 1 ]] && type tput &> /dev/null
+    then
+        color=$(tput setaf $color_code)
+        reset=$(tput sgr0)
+    fi
+    echo "${color}$@${reset}"
+}
+function red { echo_color 1 "$@"; }
+function green { echo_color 2 "$@"; }
+function brown { echo_color 3 "$@"; }
+function blue { echo_color 4 "$@"; }
+function magenta { echo_color 5 "$@"; }
+
 # Call the function to parse arguments
 parse_args "$@"
-echo "Open Webui URL: $open_webui_url"
-echo "Open Webui API URL: $api_base_url"
-echo "Function File Path: $function_file"
-echo "Function Name: $function_name"
-echo "Function ID: $function_id"
-echo "Description: $description"
+brown "Open Webui URL: $open_webui_url"
+brown "Open Webui API URL: $api_base_url"
+brown "Function File Path: $function_file"
+brown "Function Name: $function_name"
+brown "Function ID: $function_id"
+brown "Description: $description"
 
 # Sign in and get a token
 # NOTE: This assumes running without auth!
@@ -81,6 +100,19 @@ function api_call {
         -X $method \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $token" "$@"
+}
+
+function step_api_call {
+    step=$1
+    shift
+    blue $step...
+    if api_call "$@" &>/dev/null
+    then
+        green OK
+    else
+        red FAIL
+        return 1
+    fi
 }
 
 function function_exists {
@@ -113,16 +145,16 @@ body=$(python -c "import json; print(json.dumps({
     }
 }))")
 
-api_call $post_endpoint POST -d"$body"
+step_api_call "Creating function" $post_endpoint POST -d"$body"
 
 # Make sure the function is toggled on
 if [ "$(function_active $function_id)" == "false" ]
 then
-    api_call functions/id/$function_id/toggle POST
+    step_api_call "Activating function" functions/id/$function_id/toggle POST
 fi
 
 # If Valves given, configure them
 if [ "$valves" != "" ]
 then
-    api_call functions/id/$function_id/valves/update POST -d"$valves"
+    step_api_call "Configuring function" functions/id/$function_id/valves/update POST -d"$valves"
 fi
