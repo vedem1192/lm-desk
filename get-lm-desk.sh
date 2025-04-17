@@ -29,8 +29,7 @@ obee_bin=$(find_cmd_bin obee || true)
 beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
-chat_model="granite3.2:8b"
-autocomplete_model="granite3.2:2b"
+models="granite3.3 granite3.2-vision"
 dry_run="0"
 
 # If running without a TTY, always assume 'yes'
@@ -53,8 +52,7 @@ Options:
     -v, --vs-code-bin        Specify the path to code (default is ${code_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
-    -p, --chat-model         Specify the path to chat model (default is ${chat_model})
-    -a, --autocomplete-model Specify the path to autocomplete model (default is ${autocomplete_model})
+    -m, --models             Specify the models to pull as a space-separated string (default is ${models})
     -y, --yes                Skip confirmation prompt
     -n, --dry-run            Run without installing anything"
 
@@ -92,12 +90,8 @@ while [ $# -gt 0 ]; do
             install_path="$2"
             shift
             ;;
-        --chat-model|-p)
-            chat_model="$2"
-            shift
-            ;;
-        --autocomplete-model|-a)
-            autocomplete_model="$2"
+        --models|-m)
+            models="$2"
             shift
             ;;
         --yes|-y)
@@ -481,8 +475,10 @@ function pull_models {
         fi
     fi
 
-    run $ollama_bin pull $chat_model
-    run $ollama_bin pull $autocomplete_model
+    for model in $models
+    do
+        run $ollama_bin pull $model
+    done
 
     # Shut down ollama if neded
     if [ "$ollama_pid" != "" ]
@@ -508,21 +504,6 @@ function install_uv {
     # Otherwise, use curl to pull from GH release directly
     else
         install_uv_curl
-    fi
-}
-
-#----
-# Install continue into VS Code
-#----
-function install_continue {
-    if "$code_bin" --list-extensions | grep continue\.continue &>/dev/null
-    then
-        blue "Continue already installed in Visual Studio Code"
-    else
-        green "$(term_bar -)"
-        bold green "INSTALLING CONTINUE"
-        green "$(term_bar -)"
-        run "$code_bin" --install-extension "continue.continue"
     fi
 }
 
@@ -575,56 +556,6 @@ function install_jq {
         green "Installing jq with brew"
         run "$brew_bin" install jq
         jq_bin="$(find_cmd_bin jq)"
-    fi
-}
-
-#----
-# Configure continue to use the desired models
-#----
-function configure_continue {
-    green "$(term_bar -)"
-    bold green "CONFIGURING CONTINUE"
-    green "- Chat Model: $chat_model"
-    green "- Autocomplete Model: $autocomplete_model"
-    green "$(term_bar -)"
-
-    # Check preconditions
-    if [ "$jq_bin" == "" ]
-    then
-        fail "Cannot configure continue without jq"
-    fi
-    if [ "$continue_config" == "" ] || ! [ -f "$continue_config" ]
-    then
-        fail "Cannot configure continue before installing it"
-    fi
-
-    # Add the chat model to the front of the list if needed
-    updated_config=$(cat "$continue_config")
-    if [ "$(echo "$updated_config" | "$jq_bin" ".models[] | select(.title == \"${chat_model}\")")" == "" ]
-    then
-        current_models=$(echo "$updated_config" | "$jq_bin" -r '.models')
-        updated_config=$(
-            echo "$updated_config" \
-            | "$jq_bin" ".models = []" \
-            | "$jq_bin" ".models += [{\"title\": \"$chat_model\", \"provider\": \"ollama\", \"model\": \"$chat_model\"}]" \
-            | "$jq_bin" ".models += $current_models"
-        )
-    else
-        blue "Found existing 'models' entry named '$chat_model'"
-    fi
-
-    # Set the autocomplete model
-    updated_config=$(
-        echo "$updated_config" \
-        | "$jq_bin" ".tabAutocompleteModel = {\"title\": \"$autocomplete_model\", \"provider\":\"ollama\", \"model\": \"$autocomplete_model\"}"
-    )
-
-    if [ "$dry_run" == "1" ]
-    then
-        magenta "DRY RUN: Updated config"
-        echo "$updated_config" | "$jq_bin"
-    else
-        echo "$updated_config"  | "$jq_bin" > $continue_config
     fi
 }
 
