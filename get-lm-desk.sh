@@ -557,8 +557,8 @@ function install_obee {
     if [ "$OS" == "Darwin" ]
     then
         # 1. Do the plist stuff
-        curl -o $HOME/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
-        curl -o $HOME/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
+        $curl_bin -o $HOME/Library/LaunchAgents/com.granite.ollama.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.ollama.plist
+        $curl_bin -o $HOME/Library/LaunchAgents/com.granite.obee.plist https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/com.granite.obee.plist
 
         open_webui_script=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/openwebui.py
 
@@ -581,6 +581,47 @@ function install_obee {
     else
         fail "Cannot install obee on unsupported platform $OS"
     fi
+    obee_bin=$(find_cmd_bin obee || true)
+}
+
+
+#----
+# Configure beeai
+#----
+function configure_obee {
+    green "$(term_bar -)"
+    bold green "CONFIGURING OBEE"
+    green "$(term_bar -)"
+
+    # Make sure obee is running
+    run obee start 2>/dev/null
+
+    # Make sure beeai is running
+    run $brew_bin services start beeai &>/dev/null
+
+    # Ping both until they're up
+    if [ "$dry_run" == "0" ]
+    then
+        for i in $(seq 1 120)
+        do
+            run $curl_bin http://localhost:8080/api/version &>/dev/null && \
+            run $curl_bin http://localhost:8333/api/v1/openapi.json &>/dev/null && \
+            break || \
+            sleep 1
+        done
+    fi
+
+    # Download the scripts for configuring the functions
+    temp_dir=$(mktemp -d)
+    # run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
+    # run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
+    run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/gabe-l-hart/lm-desk/refs/heads/OpenBeeIndexAgents/open-webui/beeai_function.py
+    run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/gabe-l-hart/lm-desk/refs/heads/OpenBeeIndexAgents/scripts/upload_openwebui_function.sh
+
+    # Run the configured functions
+    run chmod +x $temp_dir/upload_openwebui_function.sh
+    run $temp_dir/upload_openwebui_function.sh -f $temp_dir/beeai_function.py
+    run rm -rf $temp_dir
 }
 
 
@@ -674,4 +715,12 @@ fi
 if [ "$beeai_bin" == "" ] &&  yes_no_prompt "Install beeai?"
 then
     install_beeai
+fi
+
+##################
+# Configure obee #
+##################
+if [ "$obee_bin" != "" ] && [ "$beeai_bin" != "" ] && yes_no_prompt "Configure obee?"
+then
+    configure_obee
 fi
