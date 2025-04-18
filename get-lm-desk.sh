@@ -652,12 +652,21 @@ function install_beeai {
     bold green "INSTALLING BEEAI"
     green "$(term_bar -)"
 
-    # TODO: Guard for missing brew
-    run $brew_bin install i-am-bee/beeai/beeai
-    beeai_bin=$(find_cmd_bin beeai)
+    # If brew is available use brew
+    if [ "$brew_bin" != "" ]
+    then
+        run $brew_bin install i-am-bee/beeai/beeai
+        beeai_bin=$(find_cmd_bin beeai)
 
-    # TODO: Make this non-interactive if requested
-    run $beeai_bin env setup
+        # run $beeai_bin env setup
+        echo "BeeAI: configure your preferred LLM provider"
+        run $beeai_bin env add LLM_MODEL=granite-code:3b
+        run $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1
+        run $beeai_bin env add LLM_API_KEY=ollama
+    # TODO: what other ways can we install beeai
+    else
+        echo "Currently, you need homebrew to install beeai"
+    fi
 }
 
 
