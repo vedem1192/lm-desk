@@ -133,8 +133,35 @@ else
 fi
 
 # Create the function
-create_function_path=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/create_beeai_func.py
-body=$(uv run $create_function_path $function_id $function_name $function_file $description)
+python_cmd=$(command -v python)
+if [ "$python_cmd" == "" ] || ! $python_cmd --version &>/dev/null
+then
+    python_cmd=$(command -v python3)
+fi
+if [ "$python_cmd" == "" ] || ! $python_cmd --version &>/dev/null
+then
+    uv_cmd=$(command -v uv)
+    if [ "$uv_cmd" != "" ]
+    then
+        python_cmd="$uv_cmd run python"
+    fi
+fi
+if [ "$python_cmd" == "" ] || ! $python_cmd --version &>/dev/null
+then
+    red "NO PYTHON FOUND!"
+    exit 1
+fi
+body=$($python_cmd -c "import json; print(json.dumps({
+    \"id\":\"$function_id\",
+    \"name\": \"$function_name\",
+    \"content\": open(\"$function_file\", \"r\").read(),
+    \"meta\": {
+        \"description\": \"$description\",
+        \"manifest\": {
+            \"requirements\": \"beeai-sdk\"
+        }
+    }
+}))")
 
 step_api_call "Creating function" $post_endpoint POST -d "$body"
 
