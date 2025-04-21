@@ -133,7 +133,7 @@ else
 fi
 
 # Create the function
-create_function_path=https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/scripts/create_beeai_func.py
+create_function_path=https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/create_beeai_func.py
 body=$(uv run $create_function_path $function_id $function_name $function_file $description)
 
 step_api_call "Creating function" $post_endpoint POST -d "$body"
