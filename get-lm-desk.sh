@@ -693,7 +693,7 @@ function configure_beeai {
         gb_mem=$(system_profiler -xml SPHardwareDataType \
             | grep -A 1 physical_memory \
             | grep "GB" | sed 's,[^0-9]*,,g')
-        if [ "$gb_mem" == "64" ]
+        if [ "$gb_mem" -ge "64" ]
         then
             context_size=128
         elif [ "$gb_mem" == "32" ]
