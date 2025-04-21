@@ -31,16 +31,7 @@ install_path=""
 models="granite3.3 granite3.2-vision"
 agents="gpt-researcher aider"
 dry_run="0"
-
-# If running without a TTY, always assume 'yes'
-if [[ -t 1 ]]
-then
-    yes="0"
-else
-    echo "RUNNING NON-INTERACTIVE"
-    yes="1"
-fi
-
+yes="1"
 
 help_str="Usage: $0 [options]
 Options:
@@ -55,7 +46,7 @@ Options:
     -i, --install-path       Specify the install path for tools
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
     -a, --agents             Specify the agents to configure in obee as a space-separated string (default is ${agents})
-    -y, --yes                Skip confirmation prompt
+    -k, --ask                Ask for confirmation
     -n, --dry-run            Run without installing anything"
 
 while [ $# -gt 0 ]; do
@@ -100,8 +91,8 @@ while [ $# -gt 0 ]; do
             models="$2"
             shift
             ;;
-        --yes|-y)
-            yes="1"
+        --ask|-k)
+            yes="0"
             ;;
         --dry-run|-n)
             dry_run="1"
@@ -114,6 +105,13 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# If running without a TTY, always assume 'yes'
+if ! [[ -t 1 ]]
+then
+    echo "RUNNING NON-INTERACTIVE"
+    yes="1"
+fi
 
 ## Helpers #####################################################################
 
