@@ -33,6 +33,7 @@ models="granite3.3 granite3.2-vision"
 agents="gpt-researcher aider"
 dry_run="0"
 yes="1"
+workdir=""
 
 help_str="Usage: $0 [options]
 Options:
@@ -49,6 +50,7 @@ Options:
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
     -a, --agents             Specify the agents to configure in obee as a space-separated string (default is ${agents})
     -k, --ask                Ask for confirmation
+    -w, --workdir            Specify a work dir where temp files should live (default is ${workdir})
     -n, --dry-run            Run without installing anything"
 
 while [ $# -gt 0 ]; do
@@ -96,6 +98,10 @@ while [ $# -gt 0 ]; do
         --ask|-k)
             yes="0"
             ;;
+        --workdir|-w)
+            workdir="$2"
+            shift
+            ;;
         --dry-run|-n)
             dry_run="1"
             ;;
@@ -116,6 +122,19 @@ then
 fi
 
 ## Helpers #####################################################################
+
+#----
+# Get a temporary working dir
+#----
+function work_dir {
+    if [ "$workdir" == "" ]
+    then
+        workdir=$(mktemp -d)
+    fi
+    mkdir -p $workdir &>/dev/null
+    echo $workdir
+}
+
 
 #----
 # Echo the given text with the given color code highlight
@@ -557,7 +576,7 @@ function install_jq {
             blue "Latest jq release: $latest_jq_release"
             run "$curl_bin" -L https://github.com/jqlang/jq/releases/download/${latest_jq_release}/jq-${plat}-${suffix} -o jq
             run chmod +x jq
-            temp_bin=$(mktemp -d)
+            temp_bin=$(work_dir)
             jq_bin=$"$temp_bin/jq"
             mv jq $jq_bin
         fi
@@ -636,7 +655,7 @@ function configure_obee {
     fi
 
     # Download the scripts for configuring the functions
-    temp_dir=$(mktemp -d)
+    temp_dir=$(work_dir)
     run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
     run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
 
@@ -662,7 +681,6 @@ function configure_obee {
             -f $temp_dir/beeai_function.py \
             -d "Call agents from BeeAI" $agents_arg
     fi
-    run rm -rf $temp_dir
 }
 
 
@@ -717,7 +735,9 @@ function configure_beeai {
     fi
     beeai_default_model="$beeai_default_model-beeai"
     brown "Default beeai model: $beeai_default_model"
-    $ollama_bin create $beeai_default_model -f <(echo -e "FROM $default_model\nPARAMETER num_ctx $num_ctx")
+    modelfile=$(work_dir)/Modelfile
+    echo -e "FROM $default_model\nPARAMETER num_ctx $num_ctx" > $modelfile
+    $ollama_bin create $beeai_default_model -f $modelfile
 
     # Configure beeai
     $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1 &>/dev/null
