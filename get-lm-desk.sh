@@ -28,19 +28,12 @@ obee_bin=$(find_cmd_bin obee || true)
 beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
+default_model="granite3.3"
 models="granite3.3 granite3.2-vision"
 agents="gpt-researcher aider"
 dry_run="0"
-
-# If running without a TTY, always assume 'yes'
-if [[ -t 1 ]]
-then
-    yes="0"
-else
-    echo "RUNNING NON-INTERACTIVE"
-    yes="1"
-fi
-
+yes="1"
+workdir=""
 
 help_str="Usage: $0 [options]
 Options:
@@ -49,11 +42,15 @@ Options:
     -b, --brew-bin           Specify the path to brew (default is ${brew_bin})
     -o, --ollama-bin         Specify the path to ollama (default is ${ollama_bin})
     -g, --git-bin            Specify the path to git (default is ${git_bin})
+    -B, --beeai-bin          Specify the path to beeai (default is ${beeai_bin})
+    -O, --obee-bin           Specify the path to obee (default is ${obee_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
+    -d, --default-model      Specify the model to use by default (default is ${default_model})
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
     -a, --agents             Specify the agents to configure in obee as a space-separated string (default is ${agents})
-    -y, --yes                Skip confirmation prompt
+    -k, --ask                Ask for confirmation
+    -w, --workdir            Specify a work dir where temp files should live (default is ${workdir})
     -n, --dry-run            Run without installing anything"
 
 while [ $# -gt 0 ]; do
@@ -78,6 +75,14 @@ while [ $# -gt 0 ]; do
             git_bin="$2"
             shift
             ;;
+        --beeai-bin|-B)
+            beeai_bin="$2"
+            shift
+            ;;
+        --obee-bin|-O)
+            obee_bin="$2"
+            shift
+            ;;
         --jq-bin|-j)
             jq_bin="$2"
             shift
@@ -90,8 +95,12 @@ while [ $# -gt 0 ]; do
             models="$2"
             shift
             ;;
-        --yes|-y)
-            yes="1"
+        --ask|-k)
+            yes="0"
+            ;;
+        --workdir|-w)
+            workdir="$2"
+            shift
             ;;
         --dry-run|-n)
             dry_run="1"
@@ -105,7 +114,27 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# If running without a TTY, always assume 'yes'
+if ! [[ -t 1 ]]
+then
+    echo "RUNNING NON-INTERACTIVE"
+    yes="1"
+fi
+
 ## Helpers #####################################################################
+
+#----
+# Get a temporary working dir
+#----
+function work_dir {
+    if [ "$workdir" == "" ]
+    then
+        workdir=$(mktemp -d)
+    fi
+    mkdir -p $workdir &>/dev/null
+    echo $workdir
+}
+
 
 #----
 # Echo the given text with the given color code highlight
@@ -309,6 +338,8 @@ function report_installed {
     brown "- uv: $uv_bin"
     brown "- obee: $obee_bin"
     brown "- git: $git_bin"
+    brown "- beeai: $beeai_bin"
+    brown "- obee: $obee_bin"
     brown "- jq: $jq_bin"
     brown $(term_bar -)
 }
@@ -433,19 +464,9 @@ function install_ollama {
 
 
 #----
-# Pull ollama models
+# Start ollama if needed
 #----
-function pull_models {
-    green "$(term_bar -)"
-    bold green "PULLING MODELS"
-    green "(This may take a long time based on your internet speed)"
-    green "$(term_bar -)"
-    if [ "$ollama_bin" == "" ]
-    then
-        fail "Cannot pull models without ollama"
-    fi
-
-    # Run the ollama server if needed
+function start_ollama {
     ollama_pid=""
     if ! $ollama_bin ls &>/dev/null
     then
@@ -458,18 +479,41 @@ function pull_models {
             ollama_pid=$!
         fi
     fi
+    echo $ollama_pid
+}
 
-    for model in $models
-    do
-        run $ollama_bin pull $model
-    done
-
-    # Shut down ollama if neded
+#----
+# Stop ollama if given a valid PID
+#----
+function stop_ollama {
+    ollama_pid=$1
     if [ "$ollama_pid" != "" ]
     then
         brown "Stopping ollama"
         kill $ollama_pid
     fi
+}
+
+
+#----
+# Pull ollama models
+#----
+function pull_models {
+    green "$(term_bar -)"
+    bold green "PULLING MODELS"
+    green "(This may take a long time based on your internet speed)"
+    green "$(term_bar -)"
+    if [ "$ollama_bin" == "" ]
+    then
+        fail "Cannot pull models without ollama"
+    fi
+
+    ollama_pid=$(start_ollama)
+    for model in $models
+    do
+        run $ollama_bin pull $model
+    done
+    stop_ollama $ollama_pid
 }
 
 
@@ -532,7 +576,7 @@ function install_jq {
             blue "Latest jq release: $latest_jq_release"
             run "$curl_bin" -L https://github.com/jqlang/jq/releases/download/${latest_jq_release}/jq-${plat}-${suffix} -o jq
             run chmod +x jq
-            temp_bin=$(mktemp -d)
+            temp_bin=$(work_dir)
             jq_bin=$"$temp_bin/jq"
             mv jq $jq_bin
         fi
@@ -611,7 +655,7 @@ function configure_obee {
     fi
 
     # Download the scripts for configuring the functions
-    temp_dir=$(mktemp -d)
+    temp_dir=$(work_dir)
     run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
     run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
 
@@ -637,7 +681,6 @@ function configure_obee {
             -f $temp_dir/beeai_function.py \
             -d "Call agents from BeeAI" $agents_arg
     fi
-    run rm -rf $temp_dir
 }
 
 
@@ -649,21 +692,59 @@ function install_beeai {
     bold green "INSTALLING BEEAI"
     green "$(term_bar -)"
 
-    # If brew is available use brew
-    if [ "$brew_bin" != "" ]
-    then
-        run $brew_bin install i-am-bee/beeai/beeai
-        beeai_bin=$(find_cmd_bin beeai)
+    run $brew_bin install i-am-bee/beeai/beeai
+    beeai_bin=$(find_cmd_bin beeai)
+}
 
-        # run $beeai_bin env setup
-        echo "BeeAI: configure your preferred LLM provider"
-        run $beeai_bin env add LLM_MODEL=granite3.3
-        run $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1
-        run $beeai_bin env add LLM_API_KEY=ollama
-    # TODO: what other ways can we install beeai
-    else
-        echo "Currently, you need homebrew to install beeai"
+#----
+# Configure beeai
+#----
+function configure_beeai {
+
+    # Manually replicate the env setup process. This is done because there is no
+    # way currently to script the answers to "env setup"
+
+    # Figure out the right context size based on the user's machine
+    context_size=32
+    if [ "$OS" == "Darwin" ]
+    then
+        gb_mem=$(system_profiler -xml SPHardwareDataType \
+            | grep -A 1 physical_memory \
+            | grep "GB" | sed 's,[^0-9]*,,g')
+        if [ "$gb_mem" -ge "64" ]
+        then
+            context_size=128
+        elif [ "$gb_mem" == "32" ]
+        then
+            context_size=64
+        fi
     fi
+    if ! yes_no_prompt "Using context size ${context_size}k. Proceed?"
+    then
+        read -p "Enter a context length: " context_size 2>&1
+    fi
+    num_ctx=$(expr '1024' '*' $context_size)
+    brown "Using context size ${context_size}k (num_ctx=${num_ctx})"
+
+    # Create the local Ollama model
+    ollama_pid=$(start_ollama)
+    beeai_default_model="$default_model"
+    if ! [[ "$beeai_default_model" == *":"* ]]
+    then
+        beeai_default_model="$beeai_default_model:latest"
+    fi
+    beeai_default_model="$beeai_default_model-beeai"
+    brown "Default beeai model: $beeai_default_model"
+    modelfile=$(work_dir)/Modelfile
+    echo -e "FROM $default_model\nPARAMETER num_ctx $num_ctx" > $modelfile
+    $ollama_bin create $beeai_default_model -f $modelfile
+
+    # Configure beeai
+    $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1 &>/dev/null
+    $beeai_bin env add LLM_API_KEY=ollama &>/dev/null
+    $beeai_bin env add LLM_MODEL=$beeai_default_model &>/dev/null
+    green "BEEAI CONFIG:"
+    $beeai_bin env list
 }
 
 
@@ -742,6 +823,14 @@ fi
 if [ "$beeai_bin" == "" ] &&  yes_no_prompt "Install beeai?"
 then
     install_beeai
+fi
+
+###################
+# Configure beeai #
+###################
+if [ "$beeai_bin" != "" ] && yes_no_prompt "Configure beeai?"
+then
+    configure_beeai
 fi
 
 ##################
