@@ -660,7 +660,7 @@ function install_beeai {
 
         # run $beeai_bin env setup
         echo "BeeAI: configure your preferred LLM provider"
-        run $beeai_bin env add LLM_MODEL=granite-code:3b
+        run $beeai_bin env add LLM_MODEL=granite3.3
         run $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1
         run $beeai_bin env add LLM_API_KEY=ollama
     # TODO: what other ways can we install beeai
