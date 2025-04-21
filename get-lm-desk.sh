@@ -679,12 +679,9 @@ fi
 # Install brew if needed to install other tools #
 #################################################
 need_brew="0"
-if [ "$ollama_bin" == "" ]
+if [ "$ollama_bin" == "" ] || [ "$beeai_bin" == "" ]
 then
-    if [ "$brew_bin" == "" ] && [ "$curl_bin" == "" ]
-    then
-        need_brew="1"
-    fi
+    need_brew="1"
 fi
 if [ "$need_brew" == "1" ] && yes_no_prompt "Install brew?"
 then
