@@ -143,7 +143,7 @@ then
     uv_cmd=$(command -v uv)
     if [ "$uv_cmd" != "" ]
     then
-        python_cmd="uv run python"
+        python_cmd="$uv_cmd run python"
     fi
 fi
 if [ "$python_cmd" == "" ]
