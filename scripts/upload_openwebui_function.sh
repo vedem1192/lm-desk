@@ -87,7 +87,7 @@ brown "Description: $description"
 # Sign in and get a token
 # NOTE: This assumes running without auth!
 token=$(curl -s $api_base_url/auths/signin \
-    -XPOST \
+    -X POST \
     -H "Content-Type: application/json" \
     -d'{"email": "", "password": ""}' | jq -r .token)
 
@@ -133,19 +133,10 @@ else
 fi
 
 # Create the function
-body=$(python -c "import json; print(json.dumps({
-    \"id\":\"$function_id\",
-    \"name\": \"$function_name\",
-    \"content\": open(\"$function_file\", \"r\").read(),
-    \"meta\": {
-        \"description\": \"$description\",
-        \"manifest\": {
-            \"requirements\": \"beeai-sdk\"
-        }
-    }
-}))")
+create_function_path=https://raw.githubusercontent.com/vedem1192/lm-desk/refs/heads/main/scripts/create_beeai_func.py
+body=$(uv run $create_function_path $function_id $function_name $function_file $description)
 
-step_api_call "Creating function" $post_endpoint POST -d"$body"
+step_api_call "Creating function" $post_endpoint POST -d "$body"
 
 # Make sure the function is toggled on
 if [ "$(function_active $function_id)" == "false" ]
