@@ -49,6 +49,8 @@ Options:
     -b, --brew-bin           Specify the path to brew (default is ${brew_bin})
     -o, --ollama-bin         Specify the path to ollama (default is ${ollama_bin})
     -g, --git-bin            Specify the path to git (default is ${git_bin})
+    -B, --beeai-bin          Specify the path to beeai (default is ${beeai_bin})
+    -O, --obee-bin           Specify the path to obee (default is ${obee_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
@@ -76,6 +78,14 @@ while [ $# -gt 0 ]; do
             ;;
         --git-bin|-g)
             git_bin="$2"
+            shift
+            ;;
+        --beeai-bin|-B)
+            beeai_bin="$2"
+            shift
+            ;;
+        --obee-bin|-O)
+            obee_bin="$2"
             shift
             ;;
         --jq-bin|-j)
@@ -309,6 +319,8 @@ function report_installed {
     brown "- uv: $uv_bin"
     brown "- obee: $obee_bin"
     brown "- git: $git_bin"
+    brown "- beeai: $beeai_bin"
+    brown "- obee: $obee_bin"
     brown "- jq: $jq_bin"
     brown $(term_bar -)
 }
