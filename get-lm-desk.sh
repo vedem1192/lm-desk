@@ -28,6 +28,7 @@ obee_bin=$(find_cmd_bin obee || true)
 beeai_bin=$(find_cmd_bin beeai || true)
 jq_bin=$(find_cmd_bin jq || true)
 install_path=""
+default_model="granite3.3"
 models="granite3.3 granite3.2-vision"
 agents="gpt-researcher aider"
 dry_run="0"
@@ -44,6 +45,7 @@ Options:
     -O, --obee-bin           Specify the path to obee (default is ${obee_bin})
     -j, --jq-bin             Specify the path to jq (default is ${jq_bin})
     -i, --install-path       Specify the install path for tools
+    -d, --default-model      Specify the model to use by default (default is ${default_model})
     -m, --models             Specify the models to pull as a space-separated string (default is ${models})
     -a, --agents             Specify the agents to configure in obee as a space-separated string (default is ${agents})
     -k, --ask                Ask for confirmation
@@ -443,19 +445,9 @@ function install_ollama {
 
 
 #----
-# Pull ollama models
+# Start ollama if needed
 #----
-function pull_models {
-    green "$(term_bar -)"
-    bold green "PULLING MODELS"
-    green "(This may take a long time based on your internet speed)"
-    green "$(term_bar -)"
-    if [ "$ollama_bin" == "" ]
-    then
-        fail "Cannot pull models without ollama"
-    fi
-
-    # Run the ollama server if needed
+function start_ollama {
     ollama_pid=""
     if ! $ollama_bin ls &>/dev/null
     then
@@ -468,18 +460,41 @@ function pull_models {
             ollama_pid=$!
         fi
     fi
+    echo $ollama_pid
+}
 
-    for model in $models
-    do
-        run $ollama_bin pull $model
-    done
-
-    # Shut down ollama if neded
+#----
+# Stop ollama if given a valid PID
+#----
+function stop_ollama {
+    ollama_pid=$1
     if [ "$ollama_pid" != "" ]
     then
         brown "Stopping ollama"
         kill $ollama_pid
     fi
+}
+
+
+#----
+# Pull ollama models
+#----
+function pull_models {
+    green "$(term_bar -)"
+    bold green "PULLING MODELS"
+    green "(This may take a long time based on your internet speed)"
+    green "$(term_bar -)"
+    if [ "$ollama_bin" == "" ]
+    then
+        fail "Cannot pull models without ollama"
+    fi
+
+    ollama_pid=$(start_ollama)
+    for model in $models
+    do
+        run $ollama_bin pull $model
+    done
+    stop_ollama $ollama_pid
 }
 
 
@@ -659,21 +674,57 @@ function install_beeai {
     bold green "INSTALLING BEEAI"
     green "$(term_bar -)"
 
-    # If brew is available use brew
-    if [ "$brew_bin" != "" ]
-    then
-        run $brew_bin install i-am-bee/beeai/beeai
-        beeai_bin=$(find_cmd_bin beeai)
+    run $brew_bin install i-am-bee/beeai/beeai
+    beeai_bin=$(find_cmd_bin beeai)
+}
 
-        # run $beeai_bin env setup
-        echo "BeeAI: configure your preferred LLM provider"
-        run $beeai_bin env add LLM_MODEL=granite3.3
-        run $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1
-        run $beeai_bin env add LLM_API_KEY=ollama
-    # TODO: what other ways can we install beeai
-    else
-        echo "Currently, you need homebrew to install beeai"
+#----
+# Configure beeai
+#----
+function configure_beeai {
+
+    # Manually replicate the env setup process. This is done because there is no
+    # way currently to script the answers to "env setup"
+
+    # Figure out the right context size based on the user's machine
+    context_size=32
+    if [ "$OS" == "Darwin" ]
+    then
+        gb_mem=$(system_profiler -xml SPHardwareDataType \
+            | grep -A 1 physical_memory \
+            | grep "GB" | sed 's,[^0-9]*,,g')
+        if [ "$gb_mem" == "64" ]
+        then
+            context_size=128
+        elif [ "$gb_mem" == "32" ]
+        then
+            context_size=64
+        fi
     fi
+    if ! yes_no_prompt "Using context size ${context_size}k. Proceed?"
+    then
+        read -p "Enter a context length: " context_size 2>&1
+    fi
+    num_ctx=$(expr '1024' '*' $context_size)
+    brown "Using context size ${context_size}k (num_ctx=${num_ctx})"
+
+    # Create the local Ollama model
+    ollama_pid=$(start_ollama)
+    beeai_default_model="$default_model"
+    if ! [[ "$beeai_default_model" == *":"* ]]
+    then
+        beeai_default_model="$beeai_default_model:latest"
+    fi
+    beeai_default_model="$beeai_default_model-beeai"
+    brown "Default beeai model: $beeai_default_model"
+    $ollama_bin create $beeai_default_model -f <(echo -e "FROM $default_model\nPARAMETER num_ctx $num_ctx")
+
+    # Configure beeai
+    $beeai_bin env add LLM_API_BASE=http://localhost:11434/v1 &>/dev/null
+    $beeai_bin env add LLM_API_KEY=ollama &>/dev/null
+    $beeai_bin env add LLM_MODEL=$beeai_default_model &>/dev/null
+    green "BEEAI CONFIG:"
+    $beeai_bin env list
 }
 
 
@@ -752,6 +803,14 @@ fi
 if [ "$beeai_bin" == "" ] &&  yes_no_prompt "Install beeai?"
 then
     install_beeai
+fi
+
+###################
+# Configure beeai #
+###################
+if [ "$beeai_bin" != "" ] && yes_no_prompt "Configure beeai?"
+then
+    configure_beeai
 fi
 
 ##################
