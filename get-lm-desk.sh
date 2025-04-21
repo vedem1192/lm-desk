@@ -403,16 +403,13 @@ function install_ollama_curl {
 function install_uv_curl {
     echo "Installing uv with curl"
 
-    if [ "$OS" == "Darwin" ]
-    then
-        echo "Installing on darwin -- not ready yet"
-    elif [ "$OS" == "Linux" ]
+    if [ "$OS" == "Darwin" ] || [ "$OS" == "Linux" ]
     then
         echo "Installing on linux"
         run curl -LsSf https://astral.sh/uv/install.sh | sh
         uv_bin="$(find_cmd_bin uv)"
     else
-        fail "Cannot install uv using curl with OS[$OS]/ARCH[$ARCH]"
+        fail "Cannot install uv using curl on $OS"
     fi
 }
 
@@ -574,7 +571,7 @@ function install_obee {
         if [ "$brew_bin" != "" ]
         then
             run $brew_bin update
-            run $brew_bin tap IBM/obee https://github.com/IBM/homebrew-obee.git
+            run $brew_bin tap IBM/obee https://github.com/IBM/homebrew-obee
             run $brew_bin install obee
         # Otherwise, use curl to pull from GH release directly
         else
@@ -679,14 +676,19 @@ fi
 # Install brew if needed to install other tools #
 #################################################
 need_brew="0"
-if [ "$brew_bin" == "" ] && [ "$ollama_bin" == "" ] || [ "$beeai_bin" == "" ] || [ "$obee_bin" == "" ]
+if [ "$brew_bin" == "" ] && { [ "$ollama_bin" == "" ] || [ "$beeai_bin" == "" ] || [ "$obee_bin" == "" ]; }
 then
     need_brew="1"
 fi
-if [ "$need_brew" == "1" ] && yes_no_prompt "Install brew?"
+if [ "$need_brew" == "1" ]
 then
-    install_brew
-    report_installed
+    if yes_no_prompt "Install brew? **required**"
+    then
+        install_brew
+        report_installed
+    else
+        exit
+    fi
 fi
 
 
