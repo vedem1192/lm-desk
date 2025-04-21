@@ -134,11 +134,11 @@ fi
 
 # Create the function
 python_cmd=$(command -v python)
-if [ "$python_cmd" == "" ]
+if [ "$python_cmd" == "" ] || ! $python_cmd --version &>/dev/null
 then
     python_cmd=$(command -v python3)
 fi
-if [ "$python_cmd" == "" ]
+if [ "$python_cmd" == "" ] || ! $python_cmd --version &>/dev/null
 then
     uv_cmd=$(command -v uv)
     if [ "$uv_cmd" != "" ]
@@ -146,7 +146,7 @@ then
         python_cmd="$uv_cmd run python"
     fi
 fi
-if [ "$python_cmd" == "" ]
+if [ "$python_cmd" == "" ] || ! $python_cmd --version &>/dev/null
 then
     red "NO PYTHON FOUND!"
     exit 1
