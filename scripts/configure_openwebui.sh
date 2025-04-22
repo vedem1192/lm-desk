@@ -176,3 +176,9 @@ if [ "$valves" != "" ]
 then
     step_api_call "Configuring function" functions/id/$function_id/valves/update POST -d"$valves"
 fi
+
+# Enable web search with duckduckgo
+step_api_call "Enabling web search" configs/import POST \
+    -d"{\"config\": $(api_call configs/export GET \
+        | jq '.rag.web.search.enable = true' \
+        | jq '.rag.web.search.engine = "duckduckgo"')}"

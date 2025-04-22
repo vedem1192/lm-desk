@@ -657,10 +657,10 @@ function configure_obee {
     # Download the scripts for configuring the functions
     temp_dir=$(work_dir)
     run $curl_bin -o $temp_dir/beeai_function.py https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/open-webui/beeai_function.py
-    run $curl_bin -o $temp_dir/upload_openwebui_function.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/upload_openwebui_function.sh
+    run $curl_bin -o $temp_dir/configure_openwebui.sh https://raw.githubusercontent.com/IBM/lm-desk/refs/heads/main/scripts/configure_openwebui.sh
 
     # Run the configured functions
-    run chmod +x $temp_dir/upload_openwebui_function.sh
+    run chmod +x $temp_dir/configure_openwebui.sh
     if [ "$agents" != "" ]
     then
         agents_arg="{\"ENABLED_AGENTS\": ["
@@ -673,11 +673,11 @@ function configure_obee {
             fi
         done
         agents_arg="$agents_arg]}"
-        run $temp_dir/upload_openwebui_function.sh \
+        run $temp_dir/configure_openwebui.sh \
             -f $temp_dir/beeai_function.py \
             -d "Call agents from BeeAI" -v "$agents_arg"
     else
-        run $temp_dir/upload_openwebui_function.sh \
+        run $temp_dir/configure_openwebui.sh \
             -f $temp_dir/beeai_function.py \
             -d "Call agents from BeeAI" $agents_arg
     fi
