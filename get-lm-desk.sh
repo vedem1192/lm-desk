@@ -809,6 +809,15 @@ then
     report_installed
 fi
 
+########################
+# Install jq if needed #
+########################
+if [ "$jq_bin" == "" ] && yes_no_prompt "Install jq?"
+then
+    install_jq
+    report_installed
+fi
+
 ################
 # Install obee #
 ################
